@@ -670,6 +670,38 @@ public class RCTCameraModule extends ReactContextBaseJavaModule
         promise.resolve(null != flashModes && !flashModes.isEmpty());
     }
 
+    public float clamp(float r) {
+        if (Float.isNaN(r) || Float.isInfinite(r))
+            return -1;
+        else
+            return r;
+    }
+
+    @ReactMethod
+    public void getFocusData(final ReadableMap options, final Promise promise) {
+        Camera camera = RCTCamera.getInstance().acquireCameraInstance(options.getInt("type"));
+        if (null == camera) {
+            promise.reject("No camera found.");
+            return;
+        }
+        try {
+            float[] result = new float[3];
+            camera.getParameters().getFocusDistances(result);
+            WritableMap map = new WritableNativeMap();
+            map.putDouble("nearFocusDistance", clamp(result[0]));
+            map.putDouble("optimalFocusDistance", clamp(result[1]));
+            map.putDouble("farFocusDistance", clamp(result[2]));
+            map.putString("focusMode", camera.getParameters().getFocusMode());
+            if (camera.getParameters().getFocusAreas() != null)
+                map.putInt("focusAreas", camera.getParameters().getFocusAreas().size());
+            map.putDouble("focal", camera.getParameters().getFocalLength());
+            promise.resolve(map);
+        } catch (Exception e) {
+            e.printStackTrace();
+            promise.reject(e.getMessage());
+        }
+    }
+
     private File getOutputMediaFile(int type) {
         // Get environment directory type id from requested media type.
         String environmentDirectoryType;
